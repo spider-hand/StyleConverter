@@ -1,0 +1,28 @@
+.checkbox {
+  display: flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: center;
+}
+
+.checkbox__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  background-color: var(--primary-500);
+  border: none;
+  border-radius: 2px;
+
+  &--unchecked {
+    background-color: white;
+    border: solid 1px var(--surface-100);
+  }
+}
+
+.checkbox__text {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--surface-500);
+}

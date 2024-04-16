@@ -1,0 +1,16 @@
+.result__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 24px;
+  padding: 8px;
+  background-color: var(--primary-50);
+  border-radius: 4px 4px 0 0;
+}
+
+.result__body {
+  width: 100%;
+  border: solid 1px var(--primary-50);
+  border-radius: 0 0 4px 4px;
+}

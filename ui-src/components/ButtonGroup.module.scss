@@ -1,0 +1,24 @@
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.button-group__label {
+  @include label;
+}
+
+.button-group__body {
+  display: flex;
+  gap: 16px;
+}
+
+.button-group__button {
+  @include button-base;
+
+  &--inactive {
+    color: var(--primary-500);
+    background-color: white;
+    border: solid 1px var(--primary-500);
+  }
+}

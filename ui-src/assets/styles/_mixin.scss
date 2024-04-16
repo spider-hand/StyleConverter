@@ -1,0 +1,13 @@
+@mixin button-base {
+  height: 32px;
+  padding: 0 16px;
+  color: var(--primary-50);
+  background-color: var(--primary-500);
+  border: none;
+  border-radius: 4px;
+}
+
+@mixin label {
+  font-size: 12px;
+  color: var(--surface-500);
+}

@@ -17,4 +17,14 @@ export default defineConfig({
       },
     },
   },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `
+          @import "./ui-src/assets/styles/colors";
+          @import "./ui-src/assets/styles/mixin";
+        `,
+      },
+    },
+  },
 });

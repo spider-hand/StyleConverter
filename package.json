@@ -16,11 +16,14 @@
     "dev": "concurrently -n tsc,build,vite 'npm:tsc:watch' 'npm:build:watch' 'vite'",
     "lint": "eslint --ext .ts,.tsx --ignore-pattern node_modules .",
     "lint:fix": "eslint --ext .ts,.tsx --ignore-pattern node_modules --fix .",
-    "format": "prettier --write ."
+    "lint:style": "stylelint \"**/*.{css,scss}\" --fix",
+    "format": "prettier --write .",
+    "prepare": "husky"
   },
   "author": "spider-hand",
   "license": "MIT License",
   "dependencies": {
+    "clsx": "^2.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -35,7 +38,14 @@
     "concurrently": "^8.2.2",
     "esbuild": "^0.20.2",
     "eslint": "^8.54.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
+    "sass": "^1.75.0",
+    "stylelint": "^16.3.1",
+    "stylelint-config-prettier-scss": "^1.0.0",
+    "stylelint-config-recess-order": "^5.0.1",
+    "stylelint-config-standard-scss": "^13.1.0",
     "typescript": "^5.3.2",
     "vite": "^5.2.8",
     "vite-plugin-singlefile": "^2.0.1"
@@ -49,13 +59,17 @@
     "parser": "@typescript-eslint/parser",
     "overrides": [
       {
-        "files": ["./plugin-src/**/*.{ts,tsx}"],
+        "files": [
+          "./plugin-src/**/*.{ts,tsx}"
+        ],
         "parserOptions": {
           "project": "./plugin-src/tsconfig.json"
         }
       },
       {
-        "files": ["./ui-src/**/*.{ts,tsx}"],
+        "files": [
+          "./ui-src/**/*.{ts,tsx}"
+        ],
         "parserOptions": {
           "project": "./ui-src/tsconfig.json"
         }
