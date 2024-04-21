@@ -7,6 +7,11 @@ body {
   font-family: Inter, sans-serif;
 }
 
+::selection {
+  color: var(--primary-50);
+  background-color: var(--primary-500);
+}
+
 :root {
   --primary-50: #{$primary-50};
   --primary-100: #{$primary-100};

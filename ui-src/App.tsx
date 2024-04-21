@@ -3,15 +3,44 @@ import "./global.scss";
 import ButtonGroup from "./components/ButtonGroup";
 import Result from "./components/Result";
 import Checkbox from "./components/Checkbox";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { COLOR_FORMAT_MAP, LANGUAGE_MAP } from "./constants";
-import { ColorFormatType, LanguageType } from "./typings";
+import {
+  ColorFormatType,
+  IPluginMessage,
+  IResult,
+  LanguageType,
+} from "../typings";
 
 export default function App() {
   const [language, setLanguage] = useState<LanguageType>("sass");
   const [colorFormat, setColorFormat] = useState<ColorFormatType>("hsl");
   const [excludeFolderName, setExcludeFolderName] = useState(true);
-  const [useVarFunc, setUseVarFunc] = useState(true);
+  const [useVariables, setUseVariables] = useState(true);
+  const [rootClass, setRootClass] = useState("");
+  const [variables, setVariables] = useState("");
+
+  useEffect(() => {
+    window.onmessage = (event) => {
+      const { rootClass, variables } = event.data.pluginMessage as IResult;
+      setRootClass(rootClass);
+      setVariables(variables);
+    };
+  }, []);
+
+  const generateResult = () => {
+    parent.postMessage(
+      {
+        pluginMessage: {
+          language: language,
+          colorFormat: colorFormat,
+          excludeFolderName: excludeFolderName,
+          useVariables: useVariables,
+        } as IPluginMessage,
+      },
+      "*",
+    );
+  };
 
   return (
     <main className={styles["app"]}>
@@ -41,17 +70,20 @@ export default function App() {
             />
             {language === "sass" && (
               <Checkbox
-                text={"Apply the styles using var() function"}
-                checked={useVarFunc}
-                onClick={() => setUseVarFunc(!useVarFunc)}
+                text={"Use variables"}
+                checked={useVariables}
+                onClick={() => setUseVariables(!useVariables)}
               />
             )}
           </div>
         </section>
       </section>
       <footer className={styles["app__footer"]}>
-        <button className={styles["app__button"]}>Generate</button>
-        <Result />
+        <button className={styles["app__button"]} onClick={generateResult}>
+          Generate
+        </button>
+        <Result value={rootClass} />
+        {variables !== "" && <Result value={variables} />}
       </footer>
     </main>
   );
