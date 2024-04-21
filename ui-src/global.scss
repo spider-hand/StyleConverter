@@ -7,6 +7,11 @@ body {
   font-family: Inter, sans-serif;
 }
 
+textarea {
+  font-family: Consolas, sans-serif;
+  color: var(--surface-500);
+}
+
 ::selection {
   color: var(--primary-50);
   background-color: var(--primary-500);
