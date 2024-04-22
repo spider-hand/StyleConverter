@@ -1,4 +1,4 @@
-import { IPluginMessage, IResult } from "../typings";
+import { ColorFormatType, IPluginMessage, IResult } from "../typings";
 
 figma.showUI(__html__, { width: 360, height: 600 });
 
@@ -8,17 +8,41 @@ figma.ui.onmessage = async ({
   excludeFolderName,
   useVariables,
 }: IPluginMessage) => {
-  const paintStyles = await figma.getLocalPaintStylesAsync();
+  const [paintStyles, effectStyles] = await Promise.all([
+    figma.getLocalPaintStylesAsync(),
+    figma.getLocalEffectStylesAsync(),
+  ]);
 
-  if (paintStyles.length === 0) {
+  if (paintStyles.length === 0 && effectStyles.length === 0) {
     figma.notify("Styles cannot be found.");
     return;
   }
 
-  const convertedPaintStyles = paintStyles.map((s) => {
-    const name = excludeFolderName
-      ? s.name.split("/").pop() || s.name
-      : s.name.replace(" ", "").split("/").join("-");
+  const processedPaintStyles = processPaintStyles(
+    colorFormat,
+    excludeFolderName,
+    paintStyles,
+  );
+  const processedEffectStyles = processEffectStyles(
+    colorFormat,
+    excludeFolderName,
+    effectStyles,
+  );
+
+  const result = generateResult(language === "sass" && useVariables, [
+    ...processedPaintStyles,
+    ...processedEffectStyles,
+  ]);
+  figma.ui.postMessage(result);
+};
+
+const processPaintStyles = (
+  colorFormat: ColorFormatType,
+  excludeFolderName: boolean,
+  paintStyles: PaintStyle[],
+): { name?: string; value?: string }[] => {
+  return paintStyles.map((s) => {
+    const name = generateName(s.name, excludeFolderName);
 
     const paints = s.paints.filter(
       (p) => p.visible && p.type === "SOLID",
@@ -54,12 +78,59 @@ figma.ui.onmessage = async ({
       value: value,
     };
   });
+};
 
-  const result = generateResult(
-    language === "sass" && useVariables,
-    convertedPaintStyles,
-  );
-  figma.ui.postMessage(result);
+const processEffectStyles = (
+  colorFormat: ColorFormatType,
+  excludeFolderName: boolean,
+  effectStyles: EffectStyle[],
+) => {
+  return effectStyles.map((e) => {
+    const name = generateName(e.name, excludeFolderName);
+
+    const shadowEffects = e.effects.filter(
+      (effect) =>
+        (effect.type === "DROP_SHADOW" || effect.type === "INNER_SHADOW") &&
+        effect.visible,
+    ) as Array<DropShadowEffect | InnerShadowEffect>;
+
+    if (shadowEffects.length === 0) {
+      return {};
+    }
+
+    const { color, offset, type, radius, spread } = shadowEffects[0];
+    // MEMO: Destructuring with rest syntax causes an error for some reason
+    const { a, r, g, b } = color;
+    const colorParam = { r: r, g: g, b: b };
+    const opacityParam = a !== 1 ? Math.round(a * 100) / 100 : undefined;
+
+    let value: string;
+
+    switch (colorFormat) {
+      case "hsl":
+      default:
+        value = convertIntoHSL(colorParam, opacityParam);
+        break;
+      case "hex":
+        value = convertIntoHEX(colorParam, opacityParam);
+        break;
+      case "rgb":
+        value = convertIntoRGB(colorParam, opacityParam);
+        break;
+    }
+
+    return {
+      name: name,
+      value: `${type === "INNER_SHADOW" ? "inset " : ""}${offset.x}px ${offset.y}px ${radius}px${spread !== undefined ? ` ${spread}px ` : " "}${value}`,
+    };
+  });
+};
+
+const generateName = (name: string, excludeFolderName: boolean): string => {
+  if (excludeFolderName) {
+    name = name.split("/").pop() || name;
+  }
+  return name.replace(/[\s/]+/g, "-").replace(/[ /]/g, "-");
 };
 
 const convertIntoHSL = ({ r, g, b }: RGB, opacity?: number): string => {
@@ -91,7 +162,7 @@ const convertIntoHSL = ({ r, g, b }: RGB, opacity?: number): string => {
   l = +(l * 100).toFixed(0);
 
   return opacity !== undefined
-    ? `hsla(${h}, ${s}%, ${l}% ${opacity})`
+    ? `hsla(${h}, ${s}%, ${l}%, ${opacity})`
     : `hsl(${h}, ${s}%, ${l}%)`;
 };
 
