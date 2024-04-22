@@ -1,4 +1,4 @@
-import { ColorFormatType, LanguageType } from "../typings";
+import { ColorFormatType, LanguageType } from "../../typings";
 
 export const LANGUAGE_MAP = new Map<LanguageType, string>([
   ["sass", "SASS"],
