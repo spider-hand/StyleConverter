@@ -25,6 +25,7 @@ export default function Result({ value }: Props) {
         rows={10}
         value={value}
         ref={textareaRef}
+        readOnly
       />
     </section>
   );
