@@ -29,7 +29,7 @@ figma.ui.onmessage = async ({
     effectStyles,
   );
 
-  const result = generateResult(language === "sass" && useVariables, [
+  const result = generateResult(language === "scss" && useVariables, [
     ...processedPaintStyles,
     ...processedEffectStyles,
   ]);

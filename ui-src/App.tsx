@@ -13,7 +13,7 @@ import {
 } from "../typings";
 
 export default function App() {
-  const [language, setLanguage] = useState<LanguageType>("sass");
+  const [language, setLanguage] = useState<LanguageType>("scss");
   const [colorFormat, setColorFormat] = useState<ColorFormatType>("hsl");
   const [excludeFolderName, setExcludeFolderName] = useState(true);
   const [useVariables, setUseVariables] = useState(true);
@@ -45,7 +45,7 @@ export default function App() {
   return (
     <main className={styles["app"]}>
       <header className={styles["app__header"]}>
-        Convert your styles into CSS
+        Convert your styles into CSS variables
       </header>
       <section className={styles["app__body"]}>
         <ButtonGroup
@@ -68,7 +68,7 @@ export default function App() {
               checked={excludeFolderName}
               onClick={() => setExcludeFolderName(!excludeFolderName)}
             />
-            {language === "sass" && (
+            {language === "scss" && (
               <Checkbox
                 text={"Use variables"}
                 checked={useVariables}
