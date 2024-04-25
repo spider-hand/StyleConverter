@@ -4,10 +4,11 @@ import { useRef } from "react";
 import IconButton from "./IconButton";
 
 interface Props {
+  name: string;
   value: string;
 }
 
-export default function Result({ value }: Props) {
+export default function Result({ name, value }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const copyToClipboard = () => {
@@ -18,6 +19,7 @@ export default function Result({ value }: Props) {
   return (
     <section className={styles["result"]}>
       <div className={styles["result__header"]}>
+        <span className={styles["result__title"]}>{name}</span>
         <IconButton icon={CopyImage} onClick={copyToClipboard} />
       </div>
       <textarea

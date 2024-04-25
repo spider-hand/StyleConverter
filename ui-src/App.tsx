@@ -3,7 +3,7 @@ import "./global.scss";
 import ButtonGroup from "./components/ButtonGroup";
 import Result from "./components/Result";
 import Checkbox from "./components/Checkbox";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { COLOR_FORMAT_MAP, LANGUAGE_MAP } from "./constants";
 import {
   ColorFormatType,
@@ -19,14 +19,22 @@ export default function App() {
   const [useVariables, setUseVariables] = useState(true);
   const [rootClass, setRootClass] = useState("");
   const [variables, setVariables] = useState("");
+  const [resuleName, setResultName] = useState("");
+
+  const languageRef = useRef<LanguageType>(language);
 
   useEffect(() => {
     window.onmessage = (event) => {
       const { rootClass, variables } = event.data.pluginMessage as IResult;
+      setResultName(`index.${languageRef.current}`);
       setRootClass(rootClass);
       setVariables(variables);
     };
   }, []);
+
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
 
   const generateResult = () => {
     parent.postMessage(
@@ -45,7 +53,7 @@ export default function App() {
   return (
     <main className={styles["app"]}>
       <header className={styles["app__header"]}>
-        Convert your styles into CSS variables
+        Convert your styles into CSS variables 🎨
       </header>
       <section className={styles["app__body"]}>
         <ButtonGroup
@@ -82,8 +90,10 @@ export default function App() {
         <button className={styles["app__button"]} onClick={generateResult}>
           Generate
         </button>
-        <Result value={rootClass} />
-        {variables !== "" && <Result value={variables} />}
+        <Result name={resuleName} value={rootClass} />
+        {variables !== "" && (
+          <Result name={"_variables.scss"} value={variables} />
+        )}
       </footer>
     </main>
   );
