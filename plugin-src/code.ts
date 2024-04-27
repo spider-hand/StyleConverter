@@ -62,14 +62,17 @@ const processPaintStyles = (
         value: value,
       };
     } else {
-      const { gradientStops, gradientTransform } = paints[0];
+      const { gradientStops, gradientTransform, opacity } = paints[0];
 
       const degree = `${convertIntoDegree(gradientTransform)}deg`;
 
       const valArr = gradientStops.map((gradient) => {
         const { position, color } = gradient;
         const { r, g, b, a } = color;
-        const opacityParam = generateOpacity(a);
+        const opacityRatio = generateOpacity(opacity);
+        const opacityParam = generateOpacity(
+          opacityRatio !== undefined ? a * opacityRatio : a,
+        );
         const stopVal = generateColor(colorFormat, { r, g, b }, opacityParam);
         const positionVal = Math.round(position * 100);
 
