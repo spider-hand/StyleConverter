@@ -45,38 +45,42 @@ const processPaintStyles = (
     const name = generateName(s.name, excludeFolderName);
 
     const paints = s.paints.filter(
-      (p) => p.visible && p.type === "SOLID",
-    ) as SolidPaint[];
+      (p) => p.visible && (p.type === "SOLID" || p.type === "GRADIENT_LINEAR"),
+    ) as (SolidPaint | GradientPaint)[];
 
     if (paints.length === 0) {
       return {};
     }
 
-    const { color, opacity } = paints[0];
-    const opacityParam =
-      opacity !== 1 && opacity !== undefined
-        ? Math.round(opacity * 10) / 10
-        : undefined;
+    if (paints[0].type === "SOLID") {
+      const { color, opacity } = paints[0];
+      const opacityParam = generateOpacity(opacity);
+      const value = generateColor(colorFormat, color, opacityParam);
 
-    let value: string;
+      return {
+        name: name,
+        value: value,
+      };
+    } else {
+      const { gradientStops, gradientTransform } = paints[0];
 
-    switch (colorFormat) {
-      case "hsl":
-      default:
-        value = convertIntoHSL(color, opacityParam);
-        break;
-      case "hex":
-        value = convertIntoHEX(color, opacityParam);
-        break;
-      case "rgb":
-        value = convertIntoRGB(color, opacityParam);
-        break;
+      const degree = `${convertIntoDegree(gradientTransform)}deg`;
+
+      const valArr = gradientStops.map((gradient) => {
+        const { position, color } = gradient;
+        const { r, g, b, a } = color;
+        const opacityParam = generateOpacity(a);
+        const stopVal = generateColor(colorFormat, { r, g, b }, opacityParam);
+        const positionVal = Math.round(position * 100);
+
+        return `${stopVal} ${positionVal}%`;
+      });
+
+      return {
+        name: name,
+        value: `linear-gradient(${degree}, ${valArr.join(", ")})`,
+      };
     }
-
-    return {
-      name: name,
-      value: value,
-    };
   });
 };
 
@@ -99,25 +103,10 @@ const processEffectStyles = (
     }
 
     const { color, offset, type, radius, spread } = shadowEffects[0];
-    // MEMO: Destructuring with rest syntax causes an error for some reason
-    const { a, r, g, b } = color;
-    const colorParam = { r: r, g: g, b: b };
-    const opacityParam = a !== 1 ? Math.round(a * 100) / 100 : undefined;
-
-    let value: string;
-
-    switch (colorFormat) {
-      case "hsl":
-      default:
-        value = convertIntoHSL(colorParam, opacityParam);
-        break;
-      case "hex":
-        value = convertIntoHEX(colorParam, opacityParam);
-        break;
-      case "rgb":
-        value = convertIntoRGB(colorParam, opacityParam);
-        break;
-    }
+    // MEMO: Destructuring an object with rest syntax causes an error for some reason
+    const { r, g, b, a } = color;
+    const opacityParam = generateOpacity(a);
+    const value = generateColor(colorFormat, { r, b, g }, opacityParam);
 
     return {
       name: name,
@@ -131,6 +120,42 @@ const generateName = (name: string, excludeFolderName: boolean): string => {
     name = name.split("/").pop() || name;
   }
   return name.replace(/[\s/]+/g, "-").replace(/[ /]/g, "-");
+};
+
+const generateOpacity = (val: number | undefined): number | undefined => {
+  if (val === 1 || val === undefined) return undefined;
+  else return Math.round(val * 100) / 100;
+};
+
+const generateColor = (
+  colorFormat: ColorFormatType,
+  rgb: RGB,
+  opacity: number | undefined,
+): string => {
+  let value;
+
+  switch (colorFormat) {
+    case "hsl":
+    default:
+      value = convertIntoHSL(rgb, opacity);
+      break;
+    case "hex":
+      value = convertIntoHEX(rgb, opacity);
+      break;
+    case "rgb":
+      value = convertIntoRGB(rgb, opacity);
+      break;
+  }
+
+  return value;
+};
+
+const convertIntoDegree = (matrix: Transform): number => {
+  const values = [...matrix[0], ...matrix[1]];
+  const [a, b] = values;
+  const angle = Number((Math.atan2(b, a) * (180 / Math.PI) + 90).toFixed(2));
+
+  return angle <= 0 ? angle + 360 : angle;
 };
 
 const convertIntoHSL = ({ r, g, b }: RGB, opacity?: number): string => {
@@ -173,7 +198,9 @@ const convertIntoHEX = ({ r, g, b }: RGB, opacity?: number): string => {
   };
 
   const toHexAlpha = (percentage: number) => {
-    return (percentage * 255).toString(16);
+    return Math.round(255 * percentage)
+      .toString(16)
+      .padStart(2, "0");
   };
 
   const hex = [
@@ -182,6 +209,7 @@ const convertIntoHEX = ({ r, g, b }: RGB, opacity?: number): string => {
     toHex(g),
     toHex(b),
   ].join("");
+
   return `#${hex}`;
 };
 
