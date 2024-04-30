@@ -9,6 +9,11 @@ export interface IPluginMessage {
   useVariables: boolean;
 }
 
+export interface IStyle {
+  name: string;
+  value: string;
+}
+
 export interface IResult {
   rootClass: string;
   variables: string;

@@ -1,4 +1,4 @@
-import { ColorFormatType, IPluginMessage, IResult } from "../typings";
+import { ColorFormatType, IPluginMessage, IResult, IStyle } from "../typings";
 
 figma.showUI(__html__, { width: 400, height: 600 });
 
@@ -40,82 +40,84 @@ const processPaintStyles = (
   colorFormat: ColorFormatType,
   excludeFolderName: boolean,
   paintStyles: PaintStyle[],
-): { name?: string; value?: string }[] => {
-  return paintStyles.map((s) => {
-    const name = generateName(s.name, excludeFolderName);
+): IStyle[] => {
+  return paintStyles.reduce((memo, current) => {
+    const name = generateName(current.name, excludeFolderName);
 
-    const paints = s.paints.filter(
-      (p) => p.visible && (p.type === "SOLID" || p.type === "GRADIENT_LINEAR"),
+    const paints = current.paints.filter(
+      (paint) =>
+        paint.visible &&
+        (paint.type === "SOLID" || paint.type === "GRADIENT_LINEAR"),
     ) as (SolidPaint | GradientPaint)[];
 
-    if (paints.length === 0) {
-      return {};
+    if (paints.length > 0) {
+      if (paints[0].type === "SOLID") {
+        const { color, opacity } = paints[0];
+        const opacityParam = generateOpacity(opacity);
+        const value = generateColor(colorFormat, color, opacityParam);
+
+        memo.push({
+          name: name,
+          value: value,
+        });
+      } else {
+        const { gradientStops, gradientTransform, opacity } = paints[0];
+
+        const degree = `${convertIntoDegree(gradientTransform)}deg`;
+
+        const valArr = gradientStops.map((gradient) => {
+          const { position, color } = gradient;
+          const { r, g, b, a } = color;
+          const opacityRatio = generateOpacity(opacity);
+          const opacityParam = generateOpacity(
+            opacityRatio !== undefined ? a * opacityRatio : a,
+          );
+          const stopVal = generateColor(colorFormat, { r, g, b }, opacityParam);
+          const positionVal = Math.round(position * 100);
+
+          return `${stopVal} ${positionVal}%`;
+        });
+
+        memo.push({
+          name: name,
+          value: `linear-gradient(${degree}, ${valArr.join(", ")})`,
+        });
+      }
     }
 
-    if (paints[0].type === "SOLID") {
-      const { color, opacity } = paints[0];
-      const opacityParam = generateOpacity(opacity);
-      const value = generateColor(colorFormat, color, opacityParam);
-
-      return {
-        name: name,
-        value: value,
-      };
-    } else {
-      const { gradientStops, gradientTransform, opacity } = paints[0];
-
-      const degree = `${convertIntoDegree(gradientTransform)}deg`;
-
-      const valArr = gradientStops.map((gradient) => {
-        const { position, color } = gradient;
-        const { r, g, b, a } = color;
-        const opacityRatio = generateOpacity(opacity);
-        const opacityParam = generateOpacity(
-          opacityRatio !== undefined ? a * opacityRatio : a,
-        );
-        const stopVal = generateColor(colorFormat, { r, g, b }, opacityParam);
-        const positionVal = Math.round(position * 100);
-
-        return `${stopVal} ${positionVal}%`;
-      });
-
-      return {
-        name: name,
-        value: `linear-gradient(${degree}, ${valArr.join(", ")})`,
-      };
-    }
-  });
+    return memo;
+  }, [] as IStyle[]);
 };
 
 const processEffectStyles = (
   colorFormat: ColorFormatType,
   excludeFolderName: boolean,
   effectStyles: EffectStyle[],
-) => {
-  return effectStyles.map((e) => {
-    const name = generateName(e.name, excludeFolderName);
+): IStyle[] => {
+  return effectStyles.reduce((memo, current) => {
+    const name = generateName(current.name, excludeFolderName);
 
-    const shadowEffects = e.effects.filter(
+    const shadowEffects = current.effects.filter(
       (effect) =>
         (effect.type === "DROP_SHADOW" || effect.type === "INNER_SHADOW") &&
         effect.visible,
     ) as Array<DropShadowEffect | InnerShadowEffect>;
 
-    if (shadowEffects.length === 0) {
-      return {};
+    if (shadowEffects.length > 0) {
+      const { color, offset, type, radius, spread } = shadowEffects[0];
+      // MEMO: Destructuring an object with rest syntax causes an error for some reason
+      const { r, g, b, a } = color;
+      const opacityParam = generateOpacity(a);
+      const value = generateColor(colorFormat, { r, b, g }, opacityParam);
+
+      memo.push({
+        name: name,
+        value: `${type === "INNER_SHADOW" ? "inset " : ""}${offset.x}px ${offset.y}px ${radius}px${spread !== undefined ? ` ${spread}px ` : " "}${value}`,
+      });
     }
 
-    const { color, offset, type, radius, spread } = shadowEffects[0];
-    // MEMO: Destructuring an object with rest syntax causes an error for some reason
-    const { r, g, b, a } = color;
-    const opacityParam = generateOpacity(a);
-    const value = generateColor(colorFormat, { r, b, g }, opacityParam);
-
-    return {
-      name: name,
-      value: `${type === "INNER_SHADOW" ? "inset " : ""}${offset.x}px ${offset.y}px ${radius}px${spread !== undefined ? ` ${spread}px ` : " "}${value}`,
-    };
-  });
+    return memo;
+  }, [] as IStyle[]);
 };
 
 const generateName = (name: string, excludeFolderName: boolean): string => {
@@ -226,28 +228,18 @@ const convertIntoRGB = ({ r, g, b }: RGB, opacity?: number): string => {
     : `rgb(${toRGB(r)}, ${toRGB(g)}, ${toRGB(b)})`;
 };
 
-const generateResult = (
-  useVariables: boolean,
-  styles: {
-    name?: string;
-    value?: string;
-  }[],
-): IResult => {
+const generateResult = (useVariables: boolean, styles: IStyle[]): IResult => {
   let rootClass = ":root {\n";
   let variables = "";
 
   if (useVariables) {
     styles.forEach((style) => {
-      if (style.name !== undefined && style.value !== undefined) {
-        rootClass += `  --${style.name}: #{$${style.name}};\n`;
-        variables += `$${style.name}: ${style.value};\n`;
-      }
+      rootClass += `  --${style.name}: #{$${style.name}};\n`;
+      variables += `$${style.name}: ${style.value};\n`;
     });
   } else {
     styles.forEach((style) => {
-      if (style.name !== undefined && style.value !== undefined) {
-        rootClass += `  --${style.name}: ${style.value};\n`;
-      }
+      rootClass += `  --${style.name}: ${style.value};\n`;
     });
   }
 
